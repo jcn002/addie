@@ -58,8 +58,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>1341</width>
-         <height>991</height>
+         <width>1339</width>
+         <height>992</height>
         </rect>
        </property>
        <property name="minimumSize">
@@ -80,7 +80,7 @@
              </size>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="tab_5">
              <attribute name="title">
@@ -1802,6 +1802,13 @@ p, li { white-space: pre-wrap; }
                          </layout>
                         </item>
                         <item>
+                         <widget class="QCheckBox" name="checkbox_for_python_version">
+                          <property name="text">
+                           <string>python version</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
                          <spacer name="verticalSpacer">
                           <property name="orientation">
                            <enum>Qt::Vertical</enum>
@@ -2670,6 +2677,11 @@ p, li { white-space: pre-wrap; }
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;List of workspace names.  Each workspace is an individual bank&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
+                <column>
+                 <property name="text">
+                  <string notr="true">1</string>
+                 </property>
+                </column>
                </widget>
               </item>
              </layout>
@@ -3090,6 +3102,11 @@ p, li { white-space: pre-wrap; }
                   <property name="toolTip">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;write click on the workspace name should give user the option to plot/over plot &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
+                  <column>
+                   <property name="text">
+                    <string notr="true">1</string>
+                   </property>
+                  </column>
                  </widget>
                 </item>
                 <item>
@@ -3203,7 +3220,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1361</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="sizePolicy">
