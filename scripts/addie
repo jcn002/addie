@@ -6,15 +6,15 @@ import os
 import itertools
 import psutil
 # must be imported through qtpy before any other gui imports
+from addie.ipythondockwidget import IPythonDockWidget
 from qtpy.QtCore import (QProcess, Qt, QUrl)
 from qtpy.QtGui import (QDesktopServices, QIcon)
-from qtpy.QtWidgets import (QApplication, QFileDialog, QMainWindow, QMessageBox, QTableWidgetItem)
+from qtpy.QtWidgets import (QApplication, QFileDialog, QMainWindow, QMessageBox, QTableWidgetItem, QVBoxLayout)
 
-from addie.ipythondockwidget import IPythonDockWidget
 
-import addie.ui_mainWindow
-import addie.step1
-import addie.step2
+from addie.utilities import load_ui
+#import addie.step1
+#import addie.step2
 
 from addie.about import AboutDialog
 from addie.advanced_window_handler.advanced_window import AdvancedWindow
@@ -58,9 +58,11 @@ import addie.specify_plots_style as ps
 import addie.edit_sq_dialog
 
 from addie.pdf_lines_manager import PDFPlotManager
+from addie.graphicviewlib import BraggView, GofRView, SofQView
+from addie.ipythondockwidget import IPythonDockWidget
+from addie.treelib import BraggTree, GofRTree
 
-
-class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
+class MainWindow(QMainWindow):
     """ Main addie window
     """
 
@@ -102,21 +104,22 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
     o_help_scans = None
     o_help_mantid = None
 
-    def __init__(self):
+    def __init__(self, parent=None):
         """ Initialization
         Parameters
         ----------
         """
         # Base class
-        QMainWindow.__init__(self)
+        QMainWindow.__init__(self, parent)
 
         if self.debugging:
             self.calibration_folder = '/SNS/NOM/IPTS-17118/shared/'
             self.characterization_folder = '/SNS/NOM/shared/CALIBRATION/'
 
         # Initialize the UI widgets
-        self.ui = addie.ui_mainWindow.Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = load_ui('ui_mainWindow.ui', baseinstance=self)
+        self._promote_widgets()
+
         self.ui.graphicsView_sq.set_main(self)
 
         self.ui.dockWidget_ipython.setup()
@@ -127,6 +130,7 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         init_step2 = InitStep2(parent=self)
 
         # define the event handling methods
+        self.ui.mantid_run_reduction.clicked.connect(self.do_mantid_run_reduction)
 
         # bragg diffraction tab
         self.ui.pushButton_loadBraggFile.clicked.connect(self.do_load_bragg_file)
@@ -213,6 +217,44 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         self._pdfColorManager = PDFPlotManager()
 
         return
+
+    def _promote_widgets(self):
+        # frame_graphicsView_bragg
+        graphicsView_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_bragg.setLayout(graphicsView_layout)
+        self.ui.graphicsView_bragg = BraggView(self)
+        graphicsView_layout.addWidget(self.ui.graphicsView_bragg)
+
+        # frame_graphicsView_sq
+        graphicsView_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_sq.setLayout(graphicsView_layout)
+        self.ui.graphicsView_sq= SofQView(self)
+        graphicsView_layout.addWidget(self.ui.graphicsView_sq)
+
+        # frame_graphicsView_gr
+        graphicsView_layout = QVBoxLayout()
+        self.ui.frame_graphicsView_gr.setLayout(graphicsView_layout)
+        self.ui.graphicsView_gr = GofRView(self)
+        graphicsView_layout.addWidget(self.ui.graphicsView_gr)
+
+        # frame_treeWidget_grWsList
+        temp_layout = QVBoxLayout()
+        self.ui.frame_treeWidget_grWsList.setLayout(temp_layout)
+        self.ui.treeWidget_grWsList = GofRTree(self)
+        temp_layout.addWidget(self.ui.treeWidget_grWsList)
+
+        # frame_treeWidget_braggWSList
+        temp_layout = QVBoxLayout()
+        self.ui.frame_treeWidget_braggWSList.setLayout(temp_layout)
+        self.ui.treeWidget_braggWSList = BraggTree(self)
+        temp_layout.addWidget(self.ui.treeWidget_braggWSList)
+
+        # from addie.ipythondockwidget import IPythonDockWidget
+        # frame_dockWidget_ipython
+        temp_layout = QVBoxLayout()
+        self.ui.frame_dockWidget_ipython.setLayout(temp_layout)
+        self.ui.dockWidget_ipython = IPythonDockWidget(self)
+        temp_layout.addWidget(self.ui.dockWidget_ipython)
 
     def _init_widgets(self):
         """ Initialize widgets
@@ -671,10 +713,6 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         :param auto:
         :return:
         """
-        # check
-        assert isinstance(gr_ws_name, str), 'G(r) workspace name {0} must be a string but not a {1}.' \
-                                            ''.format(gr_ws_name, type(gr_ws_name))
-
         # get the value
         vec_r, vec_g, vec_ge = self._myController.get_ws_data(gr_ws_name)
 
@@ -774,6 +812,8 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
             default_dir = self.getDefaultDir(sub_dir='GSAS')
 
         bragg_file_names = QFileDialog.getOpenFileNames(self, 'Choose Bragg File', default_dir, ext)
+        if isinstance(bragg_file_names, tuple):
+            bragg_file_names = bragg_file_names[0]
         if bragg_file_names is None or bragg_file_names == '' or len(bragg_file_names) == 0:
             return
         bragg_file_names = [str(bragg_file_name) for bragg_file_name in bragg_file_names]
@@ -870,17 +910,18 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
             default_dir = self.getDefaultDir('gofr')
 
         # pop out file
-        file_filter = 'Data Files (*.dat);;All Files (*.*)'
-        g_file_name = str(QFileDialog.getOpenFileName(self, 'Open a G(r) file', default_dir, file_filter))
-
+        file_filter = 'Data Files (*.dat);; PDFgui (*.gr);;All Files (*.*)'
+        g_file_name = QFileDialog.getOpenFileName(self, 'Open a G(r) file', default_dir, file_filter)
+        if isinstance(g_file_name, tuple):
+            g_file_name = g_file_name[0]
         # return if operation is cancelled
         if g_file_name is None or g_file_name == '':
             return
-        else:
-            # update current data directory
-            self._currDataDir = os.path.split(os.path.abspath(g_file_name))[0]
-            # set default data directory if in fixed file structure
-            self.check_in_fixed_dir_structure('gofr')
+
+        # update current data directory
+        self._currDataDir = os.path.split(os.path.abspath(g_file_name))[0]
+        # set default data directory if in fixed file structure
+        self.check_in_fixed_dir_structure('gofr')
 
         # read file
         status, ret_obj = self._myController.load_gr(g_file_name)
@@ -895,7 +936,7 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         gr_color, gr_style, gr_marker, gr_alpha = self._pdfColorManager.add_gofr(None, gr_ws_name, None)
         gr_label = gr_ws_name
 
-        self.plot_gr([gr_ws_name], [gr_color], [gr_style], [gr_marker], [gr_alpha], [gr_label])
+        self.plot_gr(gr_ws_name, gr_color, gr_style, gr_marker, gr_alpha, gr_label)
 
         # put the loaded G(r) workspace to tree 'workspaces'
         self.ui.treeWidget_grWsList.add_child_main_item('workspaces', gr_ws_name)
@@ -995,12 +1036,14 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         # get the file
         ext = 'nxs (*.nxs);;dat (*.dat);;All (*.*)'
         sq_file_names = QFileDialog.getOpenFileNames(self, 'Choose S(Q) File', default_dir, ext)
+        if isinstance(sq_file_names, tuple):
+            sq_file_names = sq_file_names[0]
         if sq_file_names is None or sq_file_names == '' or len(sq_file_names) == 0:
             return
-        else:
-            # update current data directory
-            self._currDataDir = os.path.split(os.path.abspath(sq_file_names[0]))[0]
-            self.check_in_fixed_dir_structure('SofQ')
+
+        # update current data directory
+        self._currDataDir = os.path.split(os.path.abspath(sq_file_names[0]))[0]
+        self.check_in_fixed_dir_structure('SofQ')
 
         # load S(q)
         for sq_file_name in sq_file_names:
@@ -1165,8 +1208,10 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
 
         for sq_name in sq_name_list:
             # get the output file name first
-            out_file_name = str(QFileDialog.getSaveFileName(self,
-                                                            'Input File Name to Save S(Q) {0}'.format(sq_name), self._currWorkDir, file_filter))
+            out_file_name = QFileDialog.getSaveFileName(self,
+                                                        'Input File Name to Save S(Q) {0}'.format(sq_name), self._currWorkDir, file_filter)
+            if isinstance(out_file_name, tuple):
+                out_file_name = out_file_name[0]
             if out_file_name is None or len(out_file_name) == 0:
                 # skip if the user cancel the operation on this S(Q)
                 continue
@@ -2202,7 +2247,7 @@ class MainWindow(QMainWindow, addie.ui_mainWindow.Ui_MainWindow):
         o_mantid_gui = BrowseFileFolderHandler(parent=self)
         o_mantid_gui.browse_folder()
 
-    def mantid_run_reduction(self):
+    def do_mantid_run_reduction(self):
         o_mantid_run = GlobalMantidReduction(parent=self)
         o_mantid_run.run()
 

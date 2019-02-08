@@ -1,7 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 from qtpy.QtWidgets import (QDialog)  # noqa
-
-from . import ui_colorStyleSetup
+from addie.utilities import load_ui
 from . import mplgraphicsview as mplview
 
 
@@ -19,8 +18,7 @@ class PlotStyleDialog(QDialog):
         """
         super(PlotStyleDialog, self).__init__(parent)
 
-        self.ui = ui_colorStyleSetup.Ui_Dialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui('ui_colorStyleSetup.ui', baseinstance=self)
 
         # init widgets
         self._init_widgets()

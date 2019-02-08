@@ -1,6 +1,6 @@
 from __future__ import (absolute_import, division, print_function)
 from qtpy.QtWidgets import (QDialog)
-from addie.ui_loadTableIntermediateStep import Ui_Dialog as UiDialog
+from addie.utilities import load_ui
 from addie.utilities.gui_handler import GuiHandler
 
 
@@ -10,8 +10,7 @@ class loadTableIntermediateStepInterface(QDialog):
         self.parent = parent
 
         QDialog.__init__(self, parent=parent)
-        self.ui = UiDialog()
-        self.ui.setupUi(self)
+        self.ui = load_ui('ui_loadTableIntermediateStep.ui', baseinstance=self)
         self.parent.load_intermediate_step_ok = False
 
     def closeEvent(self, event=None):
